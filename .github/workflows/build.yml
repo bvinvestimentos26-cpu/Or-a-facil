@@ -1,0 +1,47 @@
+name: Gerar APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar projeto
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Extrair projeto
+        run: |
+          mkdir projeto
+          unzip -o *.zip -d projeto
+
+      - name: Encontrar Gradle
+        run: |
+          GRADLEW=$(find projeto -name gradlew -type f | head -n 1)
+          if [ -z "$GRADLEW" ]; then
+            echo "Não encontrei o arquivo gradlew dentro do ZIP."
+            exit 1
+          fi
+          echo "GRADLEW=$GRADLEW" >> $GITHUB_ENV
+          chmod +x "$GRADLEW"
+
+      - name: Compilar APK
+        run: |
+          cd "$(dirname "$GRADLEW")"
+          ./gradlew assembleDebug
+
+      - name: Enviar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: APK
+          path: "**/build/outputs/apk/**/*.apk"
